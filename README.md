@@ -9,4 +9,4 @@
   - TEST
   - TOP
 ## Architecture 
-![Architecture](https://github.com/adit0131/APB_VIP/blob/main/apb-arch.drawio.png)
+![Architecture](https://github.com/adit0131/APB_VIP/blob/main/apb-arch.png)
