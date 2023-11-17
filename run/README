@@ -1,0 +1,38 @@
+**************************************************************************
+Basic UVM Testbench Example for APB UVC
+*************************************************************************
+
+CONTENTS:
+A. Introduction
+B. Running the Example Testbench
+
+-------------------------------------------------------------------------
+A. Introduction
+-------------------------------------------------------------------------
+
+This example shows how to implement a basic functioning UVM testbench using APB
+Verification IP. 
+    
+The UVM APB VIP transactors are connected in the following manner:
+
+                              (APB Basic UVC_ENV)
+   =================================================================
+  ||   (APB Master ENV_UVC)                  (APB Slave ENV_UVC)   ||
+  ||                           =========                           ||
+  ||   -------------------    |         |    -------------------   ||
+  ||  | ------   -------  |   |         |   |  -----   -------  |  ||
+  ||  ||Master| |Monitor| |   |         |   | |Slave| |Monitor| |  ||
+  ||  | ------   -------  |~===============~|  -----   -------  |  ||
+  ||  |  *Active Mode*    |   |         |   |   *Active Mode*   |  ||
+  ||   \_________________/    |         |    \_________________/   ||
+   ============================         =============================
+
+------------------------------------------------------------------------
+B. Running the Example Testbench
+------------------------------------------------------------------------
+   a) Use the Makefile:
+
+      make comp sim
+
+      Invoke "make help" to show more options.
+   

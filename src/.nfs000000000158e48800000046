@@ -1,0 +1,203 @@
+/////////////////////////////////////////////////////////////////////////
+// Company        : SCALEDGE 
+// Engineer       : Aditya Mishra 
+// Create Date    : Wed Sep 27 14:11:55 2023
+// Last Modified  : 25-10-2023 15:32:55
+// Modified By    : Mohamadadnan Popatpotra
+// File Name   	  : apb_uvc_env_global_monitor.sv
+// Class Name 	  : 
+// Project Name	  : 
+// Description	  : 
+//////////////////////////////////////////////////////////////////////////
+
+`ifndef APB_UVC_ENV_GLOBAL_MONITOR_SV
+`define APB_UVC_ENV_GLOBAL_MONITOR_SV
+
+class apb_uvc_env_global_monitor extends uvm_monitor;
+
+    //factory registration
+    `uvm_component_utils(apb_uvc_env_global_monitor)
+
+    virtual apb_uvc_mas_inf vif;
+
+    apb_bus_pin_cg  wdata_cg[];
+    apb_bus_pin_cg  addr_cg[];
+
+    //constructor new description
+    function new(string name="apb_uvc_env_global_monitor",uvm_component parent=null);
+        super.new(name,parent);
+        apb_cov = new;
+        wdata_cg = new[`APB_DATA_WIDTH];
+        addr_cg  = new[`APB_ADDR_WIDTH];
+        foreach(wdata_cg[i])
+          wdata_cg[i] = new();
+        foreach(addr_cg[i])
+          addr_cg[i] = new();
+
+    endfunction
+
+    //build phase
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+        if(!`uvm_config_db #(apb_uvc_mas_inf)::get(this,"*","vif",vif))
+            `uvm_fatal("APB_UVC_ENV_GLOBAL_MONITOR","virtual interface not get")
+    endfunction
+
+    //coverage group 
+    covergroup apb_cov @(posedge vif.clk);
+        
+        option.comment = " <<<<<<<<<< APB COVERAGE >>>>>>>>>> ";
+
+        //coverpoint for covering PADDR according to the range, along with PSEL
+        ADDR_CP : coverpoint {vif.psel, vif.paddr} iff(vif.presetn){
+            option.comment = "ADDR COVERAGE";
+            bins addr_low_cb = {1'b1,[0:100]}; 
+            bins addr_med_cb = {1'b1,[100:500]};
+            bins addr_high_cb = {1'b1,[500:2**`ADDR_WIDTH]};
+        }
+    
+        //coverpoint for covering PWDATA according to the range, along with PSEL
+        PWDATA_CP : coverpoint {vif.psel, vif.pwdata} iff(vif.presetn){
+            option.comment = "PWDATA COVERAGE";
+            bins wdata_low_cb = {1'b1,[0:100]};
+            bins wdata_med_cb = {1'b1,[100:500]}};
+            bins wdata_high_cb = {1'b1,[500:2**`DATA_WIDTH]};
+        }
+
+        //coverpoint for covering PRDATA according to the range, along with PSEL
+        PRDATA_CP : coverpoint {vif.psel, vif.prdata} iff(vif.presetn){
+            option.comment = "PRDATA COVERGAGE";
+            bins rdata_low_cb = {1'b1,[0:100]};
+            bins rdata_med_cb = {1'b1,[100:500]}};
+            bins rdata_high_cb = {1'b1,[500:2**`DATA_WIDTH]};
+
+        }
+
+        //coverpoint to cover transition of pwrite signal i.e write=>read & read=>write, along with PSEL
+        PWRITE_TRANS_CP : coverpoint {vif.psel, vif.pwrite} iff(vif.presetn){
+            option.comment = "PWRITE TRANSITION";
+            bins trans_w_w_r = ((1,1) => (1,1) => (1,0));
+            bins trans_r_r_w = ((1,0) => (1,0) => (1,1));
+        } 
+
+        //coverpoint for covering PWRITE signal 
+        PWRITE_CP : coverpoint vif.pwrite iff(vif.presetn);
+
+        //coverpoint for covering PESEL signal
+        PSEL_CP : coverpoint vif.psel iff(vif.presetn);
+
+        //coverpoint for covering PENABLE signal
+        PENABLE_CP : coverpoint vif.penable iff(vif.presetn);
+        
+        //coverpoint for covering PREADY signal
+        PREADY_CP : coverpoint vif.pready iff(vif.presetn);
+
+        //cross coverage for all the phases for the protocol FSM
+        PHASES : cross PSEL_CP, PENABLE_CP, PREADY_CP iff(vif.presetn){
+            option.comment = "CROSS COVERAGE OF PSEL,PENABLE,PREADY";
+            bins hand_shake_cb = {1,1,1};
+            bins setup_phase_cb = ((0,0,0) => (1,0,?));
+            bins access_phase_cb = ((1,0,?) => (1,1,?));
+        }
+
+        //cross coverage for back 2 back operation 
+        B2B_WR : cross PSEL_CP, vif.pwrite, PENABLE_CP, PREADY_CP iff(vif.presetn){
+            option.comment = "B2B COVERAGE";
+            bins b2b_w_cb = ((1,1,1,1) => (1,1,0,?));
+            bins b2b_r_cb = ((1,0,1,1) => (1,0,0,?));
+            bins b2b_wr_cb = ((1,1,1,1) => (1,1,0,1) => (1,0,1,1) => (1,0,0,?));
+        }
+
+        //coverpoint for covering PPROT signal
+        PPROT_CP : coverpoint vif.pprot iff(vif.presetn);
+
+        //coverpoint for covering PPROT signal
+        PSROBE_CP : coverpoint {vif.psel , vif.pstrob } {
+            ignore_bins  strobe_read = {5'b1????};
+        }
+        
+        //cross coverage for PWRITE and PWDATA together
+        WRITE_WDATA : cross vif.pwrite, vif.pwdata iff(vif.presetn){
+            bins w_wdata = ((1,?) => (1,?));    
+        }
+
+        //coverpoint for covering the reset which is given on the fly to check design working properly or not
+        RESET_ON_FLY_CP : coverpoint {vif.presetn , vif.psel, vif.penable , vif.pready, vif.pwrite } {
+            bins rest_on_the_fly_write = ( (5'b11101 [*2:6]) => (5'b000?0) ) ; 
+            bins reset_on_the_fly_read = ( (5'b11100 [*2:6]) => (5'b000?0) ) ;
+        }
+
+        //coverpoint for covering write operation without wait state
+        WRITE_READ_NO_WAIT_CP : coverpoint {vif.psel , vif.penable , vif.pready , vif.pwrite} iff(vif.presetn) {
+            bins write_no_wait_state = ( (4'b1101) => (4'b1111) ) ; 
+            bins read_no_wait_State = ( (4'b1100) => (4'b1110) );
+        }
+
+        //coverpoint for covering write operation with wait state
+        WRTIE_READ_WAIT_CP : coverpoint {vif.psel , vif.penable , vif.pready , vif.pwrite} iff(vif.presetn) {
+            bins write_wait_state = ( (4'b1101 [*2:timeout]) => (4'b1111)  ) ; 
+            bins read_wait_State  = ( (4'b1100 [*2:timeout]) => (4'b1110)  ); 
+        } 
+
+        //coverpoint for covering PSLVERR during the write,read operation with and without wait state
+        SLVERR_W_R_CP : coverpoint {vif.psel , vif.penable , vif.pready , vif.pslverr , vif.pwrite} {
+            bins valid_pslverr_write_operation = { 5'b11111  } ;  
+            bins read_wait_State = { 5'b11101  };
+            bins write_wait_state = { 5'b11110  };
+            bins write_wait_state = { 5'b11100  };  
+        }
+
+        //cross coverage for slave error and PPROT signal together    
+        PSLVERRXPPROT : cross SLVERR_W_R_CP, PPROT_CP iff(vif.presetn);
+
+        //cross coverage for slave error and PPROT and write read with wait
+        PSLVERRXPPROT_X_WR_WAIT : cross PSLVERRXPPROT, WRTIE_READ_WAIT_CP iff(vif.presetn);
+
+        //cross coverage for slave error and PPROT and write read without wait
+        PSLVERRXPPROT_X_WR_NO_WAIT : cross PSLVERRXPPROT, WRTIE_READ_NO_WAIT_CP iff(vif.presetn);
+        
+        //cross coverage for PWRITE, PWDATA, PADDR together occuring 
+        WRITE_WDATA_ADDR : cross PWRITE_CP, PWDATA_CP, PADDR_CP iff(vif.presetn) {
+            ignore_bins wdata_not_req_for_read_operation  = bins_of(apb_pwrite_cp)  intersect{0} };
+        }
+
+        //cross coverage for PWRITE, PRDATA, PADDR together occuring 
+        WRITE_RDATA_ADDR : cross PWRITE_CP, PWDATA_CP, PADDR_CP iff(vif.presetn) {
+            ignore_bins rdata_not_req_for_write_operation  = bins_of(apb_pwrite_cp)  intersect{1} };
+        }
+    
+        //cross coverage for PPROT AND PSTROBE signal occuring together
+        STROBE_X_PPROT : cross PPROT_CP, PSTROBE_CP iff(vif.presetn);
+
+        //cross coverage for PPROT AND PSTROBE AND SLVERR for write read, all three occuring together 
+        STROBE_X_PPROT_X_SLVERR : cross PPROT_CP, PSTROBE_CP, SLVERR_W_R_CP iff(vif.presetn);
+
+
+
+    endgroup
+ 
+    covergroup apb_bus_pin_cg with function sample(bit val);
+
+        option.per_instance = 1;
+
+        BIT_TOGGEL_CB : coverpoint val {
+            bins txn_cb_01 = (0=>1);
+        bins txn_cb_10 = (1=>0);
+        }
+
+    endgroup
+ 
+  task run_phase (uvm_phase phase);
+    forever @(posedge vif.clk) begin
+      foreach(vif.PWDATA[i])
+        wdata_cg[i].sample(vif.PWDATA[i]);
+      foreach(vif.PADDR[i])
+        addr_cg[i].sample(vif.PADDR[i]);
+    end
+  endtask
+
+
+endclass  : apb_uvc_env_global_monitor
+
+`endif //APB_UVC_ENV_GLOBAL_MONITOR_SV
+

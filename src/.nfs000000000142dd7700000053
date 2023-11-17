@@ -1,0 +1,31 @@
+/////////////////////////////////////////////////////////////////////////
+// Company        : SCALEDGE 
+// Engineer       : MOHAMADADNAN POPATPOTRA 
+// Create Date    : 30-10-2023 19:37:55
+// Last Modified  : 30-10-2023 19:40:56
+// Modified By    : Mohamadadnan Popatpotra
+// File Name   	  : apb_uvc_src_pkg.sv
+// Class Name 	  : 
+// Project Name	  : 
+// Description	  : 
+//////////////////////////////////////////////////////////////////////////
+
+`ifndef APB_UVC_SRC_PKG_SV
+`define APB_UVC_SRC_PKG_SV 
+
+
+package apb_uvc_src_pkg;
+
+  import uvm_pkg::*;
+  `include "uvm_macros.svh";
+  
+  `include "../include/apb_uvc_define.sv"
+  
+  `include "apb_uvc_env_cfg.sv";
+  `include "apb_uvc_scoreboard.sv";
+  `include "apb_uvc_env_global_monitor.sv";
+
+
+endpackage
+
+`endif 
